@@ -86,7 +86,7 @@ class Config:
             x_center = 30
             x_max = 32
 
-        return x_pad, x_query, x_center, x_max
+        return x_pad, x_query, self.x_center, self.x_max
 
 f0_up_key = int(sys.argv[1])  # transpose value
 input_path = sys.argv[2]
@@ -230,34 +230,34 @@ def get_vc(model_path):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         cpt = None
-    return {"visible": False, "type": "update"}
+        return {"visible": False, "type": "update"}
 
-print("loading %s" % model_path)
-cpt = torch.load(model_path, map_location="cpu")
-tgt_sr = cpt["config"][-1]
-cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
-if_f0 = cpt.get("f0", 1)
-version = cpt.get("version", "v1")
-if version == "v1":
-    if if_f0 == 1:
-        net_g = SynthesizerTrnMs256NSFsid(*cpt["config"], is_half=config.is_half)
+    print("loading %s" % model_path)
+    cpt = torch.load(model_path, map_location="cpu")
+    tgt_sr = cpt["config"][-1]
+    cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
+    if_f0 = cpt.get("f0", 1)
+    version = cpt.get("version", "v1")
+    if version == "v1":
+        if if_f0 == 1:
+            net_g = SynthesizerTrnMs256NSFsid(*cpt["config"], is_half=config.is_half)
+        else:
+            net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
+    elif version == "v2":
+        if if_f0 == 1:
+            net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
+        else:
+            net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
+    del net_g.enc_q
+    print(net_g.load_state_dict(cpt["weight"], strict=False))
+    net_g.eval().to(config.device)
+    if config.is_half:
+        net_g = net_g.half()
     else:
-        net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
-elif version == "v2":
-    if if_f0 == 1:
-        net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
-    else:
-        net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
-del net_g.enc_q
-print(net_g.load_state_dict(cpt["weight"], strict=False))
-net_g.eval().to(config.device)
-if config.is_half:
-    net_g = net_g.half()
-else:
-    net_g = net_g.float()
-vc = VC(tgt_sr, config)
-n_spk = cpt["config"][-3]
-return {"visible": True, "maximum": n_spk, "__type__": "update"}
+        net_g = net_g.float()
+    vc = VC(tgt_sr, config)
+    n_spk = cpt["config"][-3]
+    return {"visible": True, "maximum": n_spk, "__type__": "update"}
 
 get_vc(model_path)
 wav_opt = vc_single(
