@@ -21,7 +21,72 @@ class Config:
         self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
 
     def device_config(self) -> tuple:
-        # ... (the rest of the method remains unchanged)
+        if torch.cuda.is_available():
+            i_device = int(self.device.split(":")[-1])
+            self.gpu_name = torch.cuda.get_device_name(i_device)
+            if (
+                ("16" in self.gpu_name and "V100" not in self.gpu_name.upper())
+                or "P40" in self.gpu_name.upper()
+                or "1060" in self.gpu_name
+                or "1070" in self.gpu_name
+                or "1080" in self.gpu_name
+            ):
+                print("16系/10系显卡和P40强制单精度")
+                self.is_half = False
+                for config_file in ["32k.json", "40k.json", "48k.json"]:
+                    with open(f"configs/{config_file}", "r") as f:
+                        strr = f.read().replace("true", "false")
+                    with open(f"configs/{config_file}", "w") as f:
+                        f.write(strr)
+                with open("trainset_preprocess_pipeline_print.py", "r") as f:
+                    strr = f.read().replace("3.7", "3.0")
+                with open("trainset_preprocess_pipeline_print.py", "w") as f:
+                    f.write(strr)
+            else:
+                self.gpu_name = None
+            self.gpu_mem = int(
+                torch.cuda.get_device_properties(i_device).total_memory
+                / 1024
+                / 1024
+                / 1024
+                + 0.4
+            )
+            if self.gpu_mem <= 4:
+                with open("trainset_preprocess_pipeline_print.py", "r") as f:
+                    strr = f.read().replace("3.7", "3.0")
+                with open("trainset_preprocess_pipeline_print.py", "w") as f:
+                    f.write(strr)
+        elif torch.backends.mps.is_available():
+            print("没有发现支持的N卡, 使用MPS进行推理")
+            self.device = "mps"
+        else:
+            print("没有发现支持的N卡, 使用CPU进行推理")
+            self.device = "cpu"
+            self.is_half = True
+
+        if self.n_cpu == 0:
+            self.n_cpu = cpu_count()
+
+        if self.is_half:
+            # 6G显存配置
+            x_pad = 3
+            x_query = 10
+            x_center = 60
+            x_max = 65
+        else:
+            # 5G显存配置
+            x_pad = 1
+            x_query = 6
+            x_center = 38
+            x_max = 41
+
+        if self.gpu_mem != None and self.gpu_mem <= 4:
+            x_pad = 1
+            x_query = 5
+            x_center = 30
+            x_max = 32
+
+        return x_pad, x_query, x_center, x_max
 
 f0_up_key = int(sys.argv[1])  # transpose value
 input_path = sys.argv[2]
@@ -48,9 +113,7 @@ else:
 config = Config(device, is_half)
 now_dir = os.getcwd()
 sys.path.append(now_dir)
-
 from vc_infer_pipeline import VC
-from infer_pack.models import SynthesizerTrnMs256NSFsid, SynthesizerTrnMs256NSFsid_nono
 from my_utils import load_audio
 from fairseq import checkpoint_utils
 from scipy.io import wavfile
@@ -104,14 +167,12 @@ def vc_single(
     if_f0 = cpt.get("f0", 1)
 
     file_index = (
-        (
-            file_index.strip(" ")
-            .strip('"')
-            .strip("\n")
-            .strip('"')
-            .strip(" ")
-            .replace("trained", "added")
-        )
+        file_index.strip(" ")
+        .strip('"')
+        .strip("\n")
+        .strip('"')
+        .strip(" ")
+        .replace("trained", "added")
         if file_index != ""
         else file_index2
     )
@@ -149,22 +210,26 @@ def get_vc(model_path):
             hubert_model = net_g = n_spk = vc = hubert_model = tgt_sr = None
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-    if_f0 = cpt.get("f0", 1)
-    version = cpt.get("version", "v1")
-    if version == "v1":
-        if if_f0 == 1:
-            net_g = SynthesizerTrnMs256NSFsid(*cpt["config"], is_half=config.is_half)
-        else:
-            net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
-    elif version == "v2":
-        if if_f0 == 1:
-            net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
-        else:
-            net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
-    del net_g, cpt
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    cpt = None
+        if_f0 = cpt.get("f0", 1)
+        version = cpt.get("version", "v1")
+        if version == "v1":
+            if if_f0 == 1:
+                net_g = SynthesizerTrnMs256NSFsid(
+                    *cpt["config"], is_half=config.is_half
+                )
+            else:
+                net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
+        elif version == "v2":
+            if if_f0 == 1:
+                net_g = SynthesizerTrnMs768NSFsid(
+                    *cpt["config"], is_half=config.is_half
+                )
+            else:
+                net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
+        del net_g, cpt
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        cpt = None
     return {"visible": False, "type": "update"}
 
 print("loading %s" % model_path)
@@ -192,7 +257,11 @@ else:
     net_g = net_g.float()
 vc = VC(tgt_sr, config)
 n_spk = cpt["config"][-3]
+return {"visible": True, "maximum": n_spk, "__type__": "update"}
 
 get_vc(model_path)
-wav_opt = vc_single(0, input_path, f0_up_key, None, f0method, file_index, file_index2, index_rate, filter_radius, resample_sr, rms_mix_rate, protect)
+wav_opt = vc_single(
+    0, input_path, f0_up_key, None, f0method, file_index, file_index2, index_rate, 
+    filter_radius, resample_sr, rms_mix_rate, protect
+)
 wavfile.write(opt_path, tgt_sr, wav_opt)
