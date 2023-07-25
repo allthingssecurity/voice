@@ -196,7 +196,7 @@ def vc_single(
         resample_sr,
         rms_mix_rate,
         version,
-        f0_file=f0_file,
+       # f0_file=f0_file,
         protect=protect
     )
     return audio_opt
