@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Conversion</title>
+</head>
+<body>
+  <h1>Voice Conversion</h1>
+  <input type="file" id="audioFileInput">
+  <button onclick="uploadAudio()">Convert Voice</button>
+  <br>
+  <audio controls id="audioPlayer">
+    <!-- Audio will be loaded here after processing -->
+  </audio>
+
+  <script>
+    function uploadAudio() {
+      const fileInput = document.getElementById('audioFileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select an audio file to upload.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('audioFile', file);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      .then(response => response.blob())
+      .then(blob => {
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioURL = URL.createObjectURL(blob);
+        audioPlayer.src = audioURL;
+      })
+      .catch(error => {
+        console.error('Error during audio upload:', error);
+      });
+    }
+  </script>
+</body>
+</html>
