@@ -21,7 +21,7 @@ app.use(express.static('public')); // Serve static files from 'public' directory
 app.post('/upload', upload.single('audioFile'), (req, res) => {
   const inputFile = req.file.path;
   const outputFile = path.join(__dirname, 'processed_audio.wav');
-  const pythonScript = 'myinferer.py'; // Replace with the actual name of your Python script
+  const pythonScript = 'myinfer.py'; // Replace with the actual name of your Python script
 
   // Execute the Python script using spawn
   const pythonProcess = spawn('python', [
@@ -29,7 +29,7 @@ app.post('/upload', upload.single('audioFile'), (req, res) => {
     '-6',
     inputFile, // Updated to use the uploaded audio file from the server directory
     outputFile,
-    'weights/oblivion_guard_v2.pth', // Replace with the model path
+    '/workspace/Retrieval-based-Voice-Conversion-WebUI/weights/modi.pth', // Replace with the model path
     'cuda:0',
     'False',
     'harvest',
