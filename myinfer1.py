@@ -87,7 +87,7 @@ class Config:
             x_center = 30
             x_max = 32
 
-        return x_pad, x_query, self.x_center, self.x_max
+        return x_pad, x_query, x_center, x_max
 
 f0_up_key = int(sys.argv[1])  # transpose value
 input_path = sys.argv[2]
