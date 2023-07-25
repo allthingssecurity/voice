@@ -42,19 +42,21 @@ app.post('/upload', upload.single('audioFile'), (req, res) => {
     '0',
     '1.0',
   ]);
-console.log('After launching python ');
+console.log('After preparing python script ');
   pythonProcess.on('close', (code) => {
     if (code === 0) {
+		console.log('Success');
       // Read the processed audio file and send it to the client
       const audioData = fs.readFileSync(outputFile);
       res.writeHead(200, { 'Content-Type': 'audio/wav' });
       res.end(audioData, 'binary');
     } else {
+		console.log('Error ');
       res.status(500).send('Error processing the audio file.');
     }
   });
 });
-
+console.log('After launching python ');
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${port}`);
 });
