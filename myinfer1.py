@@ -4,11 +4,12 @@ import pdb
 import torch
 import numpy as np
 from multiprocessing import cpu_count
+from infer_pack.models import SynthesizerTrnMs256NSFsid, SynthesizerTrnMs256NSFsid_nono
 from infer_pack.models import (
     SynthesizerTrnMs256NSFsid,
     SynthesizerTrnMs256NSFsid_nono,
-    SynthesizerTrnMs768NSFsid,
-    SynthesizerTrnMs768NSFsid_nono,
+    #SynthesizerTrnMs768NSFsid,
+    #SynthesizerTrnMs768NSFsid_nono,
 )
 
 class Config:
@@ -219,13 +220,13 @@ def get_vc(model_path):
                 )
             else:
                 net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
-        elif version == "v2":
-            if if_f0 == 1:
-                net_g = SynthesizerTrnMs768NSFsid(
-                    *cpt["config"], is_half=config.is_half
-                )
-            else:
-                net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
+        #elif version == "v2":
+         #   if if_f0 == 1:
+          #      net_g = SynthesizerTrnMs768NSFsid(
+           #         *cpt["config"], is_half=config.is_half
+            #    )
+            #else:
+             #   net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
         del net_g, cpt
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -243,11 +244,11 @@ def get_vc(model_path):
             net_g = SynthesizerTrnMs256NSFsid(*cpt["config"], is_half=config.is_half)
         else:
             net_g = SynthesizerTrnMs256NSFsid_nono(*cpt["config"])
-    elif version == "v2":
-        if if_f0 == 1:
-            net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
-        else:
-            net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
+    #elif version == "v2":
+     #   if if_f0 == 1:
+      #      net_g = SynthesizerTrnMs768NSFsid(*cpt["config"], is_half=config.is_half)
+       # else:
+        #    net_g = SynthesizerTrnMs768NSFsid_nono(*cpt["config"])
     del net_g.enc_q
     print(net_g.load_state_dict(cpt["weight"], strict=False))
     net_g.eval().to(config.device)
