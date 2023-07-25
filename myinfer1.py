@@ -1,13 +1,9 @@
-import os,sys,pdb,torch
-now_dir = os.getcwd()
-sys.path.append(now_dir)
-import argparse
-import glob
+import os
 import sys
+import pdb
 import torch
 import numpy as np
 from multiprocessing import cpu_count
-
 from infer_pack.models import (
     SynthesizerTrnMs256NSFsid,
     SynthesizerTrnMs256NSFsid_nono,
@@ -52,6 +48,7 @@ else:
 config = Config(device, is_half)
 now_dir = os.getcwd()
 sys.path.append(now_dir)
+
 from vc_infer_pipeline import VC
 from infer_pack.models import SynthesizerTrnMs256NSFsid, SynthesizerTrnMs256NSFsid_nono
 from my_utils import load_audio
@@ -170,10 +167,10 @@ def get_vc(model_path):
     cpt = None
     return {"visible": False, "type": "update"}
 
-print("loading %s" % model_path)  # Changed 'person' to 'model_path'
-cpt = torch.load(model_path, map_location="cpu")  # Changed 'person' to 'model_path'
+print("loading %s" % model_path)
+cpt = torch.load(model_path, map_location="cpu")
 tgt_sr = cpt["config"][-1]
-cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]  
+cpt["config"][-3] = cpt["weight"]["emb_g.weight"].shape[0]
 if_f0 = cpt.get("f0", 1)
 version = cpt.get("version", "v1")
 if version == "v1":
@@ -195,21 +192,7 @@ else:
     net_g = net_g.float()
 vc = VC(tgt_sr, config)
 n_spk = cpt["config"][-3]
-return {"visible": True, "maximum": n_spk, "__type__": "update"}
 
 get_vc(model_path)
-wav_opt = vc_single(
-    0,
-    input_path,
-    f0_up_key,
-    None,
-    f0method,
-    file_index,
-    file_index2,
-    index_rate,
-    filter_radius,
-    resample_sr,
-    rms_mix_rate,
-    protect
-)
+wav_opt = vc_single(0, input_path, f0_up_key, None, f0method, file_index, file_index2, index_rate, filter_radius, resample_sr, rms_mix_rate, protect)
 wavfile.write(opt_path, tgt_sr, wav_opt)
