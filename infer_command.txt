@@ -1,2 +1,4 @@
 !python myinfer.py 0 "/content/drive/MyDrive/modi/audio/kannada1.mp3" "/content/drive/MyDrive/modi/audio/putin_kannada.wav" "/content/Retrieval-based-Voice-Conversion-WebUI/weights/putin.pth" "" "cuda:0" "pm"
 
+npm install express multer fs path
+node app.js
