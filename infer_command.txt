@@ -1,1 +1,2 @@
-python myinferer.py -6 "example.wav" "example_processed.wav" "weights/oblivion_guard_v2.pth" "cuda:0" "False" "harvest" "logs/oblivion_guard_v2/added_IVF2892_Flat_nprobe_1_v1.index" "" 1 3 0 1.0
+!python myinfer.py 0 "/content/drive/MyDrive/modi/audio/kannada1.mp3" "/content/drive/MyDrive/modi/audio/putin_kannada.wav" "/content/Retrieval-based-Voice-Conversion-WebUI/weights/putin.pth" "" "cuda:0" "pm"
+

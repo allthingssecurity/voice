@@ -7,6 +7,30 @@ import sys
 import torch
 import numpy as np
 from multiprocessing import cpu_count
+
+#os.chdir("/home/thinkingmachine/rbvc")
+using_cli = False
+device = None
+is_half = False
+
+if(len(sys.argv) > 0):
+    f0_up_key=int(sys.argv[1]) #transpose value
+    input_path=sys.argv[2]
+    output_path=sys.argv[3]
+    model_path=sys.argv[4]
+    file_index=sys.argv[5] #.index file
+    device=sys.argv[6]
+    f0_method=sys.argv[7] #pm or harvest or crepe
+    f0_file=None
+    using_cli = True
+
+    #file_index2=sys.argv[8] 
+    #index_rate=float(sys.argv[10]) #search feature ratio
+    #filter_radius=float(sys.argv[11]) #median filter
+    #resample_sr=float(sys.argv[12]) #resample audio in post processing
+    #rms_mix_rate=float(sys.argv[13]) #search feature
+    print(sys.argv)
+
 class Config:
     def __init__(self,device,is_half):
         self.device = device
@@ -17,7 +41,7 @@ class Config:
         self.x_pad, self.x_query, self.x_center, self.x_max = self.device_config()
 
     def device_config(self) -> tuple:
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and device != "cpu":
             i_device = int(self.device.split(":")[-1])
             self.gpu_name = torch.cuda.get_device_name(i_device)
             if (
@@ -58,7 +82,7 @@ class Config:
         else:
             print("没有发现支持的N卡, 使用CPU进行推理")
             self.device = "cpu"
-            self.is_half = True
+            self.is_half = False
 
         if self.n_cpu == 0:
             self.n_cpu = cpu_count()
@@ -83,26 +107,6 @@ class Config:
             x_max = 32
 
         return x_pad, x_query, x_center, x_max
-
-f0_up_key=int(sys.argv[1]) #transpose value
-input_path=sys.argv[2]
-opt_path=sys.argv[3]
-model_path=sys.argv[4]
-device=sys.argv[5]
-is_half=sys.argv[6]
-f0method=sys.argv[7] #pm or harvest
-file_index=sys.argv[8] #.index file
-file_index2=sys.argv[9] 
-index_rate=float(sys.argv[10]) #search feature ratio
-filter_radius=float(sys.argv[11]) #median filter
-resample_sr=float(sys.argv[12]) #resample audio in post processing
-rms_mix_rate=float(sys.argv[13]) #search feature
-print(sys.argv)
-
-if(is_half.lower() == 'true'):
-    is_half = True
-else:
-    is_half = False
 
 config=Config(device,is_half)
 now_dir=os.getcwd()
@@ -141,8 +145,12 @@ def vc_single(
     filter_radius=3, 
     resample_sr=0, 
     rms_mix_rate=1.0, 
+    model_path="",
+    output_path="",
+    protect=0.33
 ):
     global tgt_sr, net_g, vc, hubert_model, version
+    get_vc(model_path)
     if input_audio_path is None:
         return "You need to upload an audio file", None
     
@@ -177,22 +185,24 @@ def vc_single(
         net_g,
         sid,
         audio,
-        input_audio_path,
+        #input_audio_path,
         times,
         f0_up_key,
         f0_method,
         file_index,
-        # file_big_npy,
+        
         index_rate,
         if_f0,
-        filter_radius,
-        tgt_sr,
-        resample_sr,
-        rms_mix_rate,
-        version,
+        #filter_radius,
+        #tgt_sr,
+        #resample_sr,
+        #rms_mix_rate,
+        #version,
         f0_file=f0_file,
+        #protect=protect
     )
-    return audio_opt
+    wavfile.write(output_path, tgt_sr, audio_opt)
+    return('processed')
 
 
 def get_vc(model_path):
@@ -216,6 +226,5 @@ def get_vc(model_path):
     n_spk=cpt["config"][-3]
     # return {"visible": True,"maximum": n_spk, "__type__": "update"}
 
-get_vc(model_path)
-wav_opt=vc_single(0,input_path,f0_up_key,None,f0method,file_index,file_index2,index_rate,filter_radius,resample_sr,rms_mix_rate)
-wavfile.write(opt_path, tgt_sr, wav_opt)
+if(using_cli):
+    vc_single(sid=0,input_audio_path=input_path,f0_up_key=f0_up_key,f0_file=f0_file,f0_method=f0_method,file_index=file_index,file_index2="",index_rate=1,filter_radius=3,resample_sr=0,rms_mix_rate=0,model_path=model_path,output_path=output_path)
