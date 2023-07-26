@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = 9000;
+const port = 8888;
 
 // Configure multer to handle file uploads
 const storage = multer.diskStorage({
@@ -28,34 +28,30 @@ app.post('/upload', upload.single('audioFile'), (req, res) => {
   console.log('Before launching python ');
   const pythonProcess = spawn('python3', [
     pythonScript,
-    '-6',
+    '0',
     inputFile, // Updated to use the uploaded audio file from the server directory
     outputFile,
     '/workspace/Retrieval-based-Voice-Conversion-WebUI/weights/modi.pth', // Replace with the model path
-    'cuda:0',
-    'False',
-    'harvest',
-    'logs/oblivion_guard_v2/added_IVF2892_Flat_nprobe_1_v1.index',
     '',
-    '1',
-    '3',
-    '0',
-    '1.0',
+    'cuda:0',
+    'pm',
   ]);
-console.log('After preparing python script ');
+  console.log('After preparing python script ');
+
   pythonProcess.on('close', (code) => {
     if (code === 0) {
-		console.log('Success');
+      console.log('Success');
       // Read the processed audio file and send it to the client
       const audioData = fs.readFileSync(outputFile);
       res.writeHead(200, { 'Content-Type': 'audio/wav' });
       res.end(audioData, 'binary');
     } else {
-		console.log('Error ');
+      console.log('Error');
       res.status(500).send('Error processing the audio file.');
     }
   });
 });
+
 console.log('After launching python ');
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${port}`);
